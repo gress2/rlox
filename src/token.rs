@@ -23,14 +23,13 @@ pub trait Printable {
 pub struct Token {
     pub type_: TokenType,
     pub lexeme: String,
-    pub line: i8, 
+    pub line: i8,
     pub num_: Option<f64>,
     pub str_: Option<String>
 }
 
 impl Printable for Token {
     fn print(&self) {
-        println!("{0:?} {1}", self.type_, self.lexeme);
+        println!("L{0}: {1:?} {2}", self.line, self.type_, self.lexeme);
     }
 }
-

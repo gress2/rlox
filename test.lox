@@ -1,1 +1,3 @@
-jamir
+var jamir = 13;
+var k = 4;
+var xd = f("333");

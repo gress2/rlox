@@ -5,8 +5,24 @@ use token::Token;
 use token::TokenType;
 use token::Printable;
 
-fn build_token(type_ : TokenType, line : &i8) -> Token {
-    return Token { 
+fn build_token(type_ : TokenType, line : &i8, start_iter : &Peekable<Chars>, end_iter : &Peekable<Chars>) -> Token {
+
+    /*let lexeme : String =
+
+    let mut tkn : Token = {
+        type_ : type_,
+
+    }
+
+    match type_ {
+        TokenType::Number => {
+            return Token {}
+        }
+    }*/
+
+
+
+    return Token {
         type_ : type_,
         lexeme : "".to_string(),
         line : *line,
@@ -116,60 +132,66 @@ fn get_identifier(c: char, char_iter: &mut Peekable<Chars>) -> String {
 }
 
 fn scan_token(mut char_iter: &mut Peekable<Chars>, mut line: &mut i8) -> Token {
+    let start_iter : Peekable<Chars> = char_iter.clone();
+
+    let tokenize = | ty: TokenType | -> Token {
+        build_token(ty, &line, &start_iter, &char_iter)
+    };
+
     match char_iter.next() {
         Some(c) => match c {
-            '(' => return build_token(TokenType::LeftParen, &line),
-            ')' => return build_token(TokenType::RightParen, &line),
-            '{' => return build_token(TokenType::LeftBrace, &line),
-            '}' => return build_token(TokenType::RightBrace, &line),
-            ',' => return build_token(TokenType::Comma, &line),
-            '.' => return build_token(TokenType::Dot, &line),
-            '-' => return build_token(TokenType::Minus, &line),
-            '+' => return build_token(TokenType::Plus, &line),
-            ';' => return build_token(TokenType::SemiColon, &line),
-            '*' => return build_token(TokenType::Star, &line),
+            '(' => return tokenize(TokenType::LeftParen),
+            ')' => return tokenize(TokenType::RightParen),
+            '{' => return tokenize(TokenType::LeftBrace),
+            '}' => return tokenize(TokenType::RightBrace),
+            ',' => return tokenize(TokenType::Comma),
+            '.' => return tokenize(TokenType::Dot),
+            '-' => return tokenize(TokenType::Minus),
+            '+' => return tokenize(TokenType::Plus),
+            ';' => return tokenize(TokenType::SemiColon),
+            '*' => return tokenize(TokenType::Star),
             '!' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::BangEqual, &line);
+                    return tokenize(TokenType::BangEqual);
                 } else {
-                    return build_token(TokenType::Bang, &line);
+                    return tokenize(TokenType::Bang);
                 }
-            }, 
+            },
             '=' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::EqualEqual, &line);
+                    return tokenize(TokenType::EqualEqual);
                 } else {
-                    return build_token(TokenType::Equal, &line);
+                    return tokenize(TokenType::Equal);
                 }
             },
             '<' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::LessEqual, &line);
+                    return tokenize(TokenType::LessEqual);
                 } else {
-                    return build_token(TokenType::Less, &line);
+                    return tokenize(TokenType::Less);
                 }
             },
             '>' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::GreaterEqual, &line);
+                    return tokenize(TokenType::GreaterEqual);
                 } else {
-                    return build_token(TokenType::Greater, &line);
+                    return tokenize(TokenType::Greater);
                 }
             },
             '/' => {
                 if next_matches('/', &mut char_iter) {
                     consume_comment(&mut char_iter, &mut line);
-                    return build_token(TokenType::Null, &line);
+                    return tokenize(TokenType::Null);
                 } else {
-                    return build_token(TokenType::Slash, &line);
+                    return tokenize(TokenType::Slash);
                 }
             },
-            ' ' => return build_token(TokenType::Null, &line), 
-            '\r' => return build_token(TokenType::Null, &line),
-            '\t' => return build_token(TokenType::Null, &line),
+            ' ' => return tokenize(TokenType::Null),
+            '\r' => return tokenize(TokenType::Null),
+            '\t' => return tokenize(TokenType::Null),
             '\n' => {
-                *line += 1;   
-                return build_token(TokenType::Null, &line);
+                *line += 1;
+                return tokenize(TokenType::Null);
             },
             '"' => {
                 let s : String = get_string(&mut char_iter, &mut line);
@@ -183,30 +205,30 @@ fn scan_token(mut char_iter: &mut Peekable<Chars>, mut line: &mut i8) -> Token {
                     let s : String = get_identifier(c, &mut char_iter);
 
                     match s.as_ref() {
-                        "and" => return build_token(TokenType::And, &line),
-                        "class" => return build_token(TokenType::Class, &line),
-                        "else" => return build_token(TokenType::Else, &line),
-                        "false" => return build_token(TokenType::False, &line),
-                        "fun" => return build_token(TokenType::Fun, &line),
-                        "for" => return build_token(TokenType::For, &line),
-                        "if" => return build_token(TokenType::If, &line),
-                        "nil" => return build_token(TokenType::Nil, &line),
-                        "or" => return build_token(TokenType::Or, &line),
-                        "print" => return build_token(TokenType::Print, &line),
-                        "return" => return build_token(TokenType::Return, &line),
-                        "super" => return build_token(TokenType::Super, &line),
-                        "this" => return build_token(TokenType::This, &line),
-                        "true" => return build_token(TokenType::True, &line),
-                        "var" => return build_token(TokenType::Var, &line),
-                        "while" => return build_token(TokenType::While, &line),
-                        _ => return build_token(TokenType::Identifier, &line)
+                        "and" => return tokenize(TokenType::And),
+                        "class" => return tokenize(TokenType::Class),
+                        "else" => return tokenize(TokenType::Else),
+                        "false" => return tokenize(TokenType::False),
+                        "fun" => return tokenize(TokenType::Fun),
+                        "for" => return tokenize(TokenType::For),
+                        "if" => return tokenize(TokenType::If),
+                        "nil" => return tokenize(TokenType::Nil),
+                        "or" => return tokenize(TokenType::Or),
+                        "print" => return tokenize(TokenType::Print),
+                        "return" => return tokenize(TokenType::Return),
+                        "super" => return tokenize(TokenType::Super),
+                        "this" => return tokenize(TokenType::This),
+                        "true" => return tokenize(TokenType::True),
+                        "var" => return tokenize(TokenType::Var),
+                        "while" => return tokenize(TokenType::While),
+                        _ => return tokenize(TokenType::Identifier)
                     }
                 } else {
-                    return build_token(TokenType::Null, &line);
+                    return tokenize(TokenType::Null);
                 }
             }
         },
-        None => return build_token(TokenType::Eof, &line)
+        None => return tokenize(TokenType::Eof)
     }
 }
 
@@ -222,7 +244,7 @@ pub fn scan_tokens(source: String) -> Vec<Token> {
         let tkn = scan_token(&mut char_iter, &mut line);
         match tkn {
             Token { type_: TokenType::Eof, .. } => {
-                tokens.push(tkn);    
+                tokens.push(tkn);
                 break;
             },
             Token { type_: TokenType::Null, .. } => (),

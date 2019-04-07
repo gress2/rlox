@@ -5,11 +5,33 @@ use token::Token;
 use token::TokenType;
 use token::Printable;
 
-fn build_token(type_ : TokenType) -> Token {
+fn build_token(type_ : TokenType, line : &i8) -> Token {
     return Token { 
         type_ : type_,
-        lexeme : "stuff".to_string(),
-        line : 0
+        lexeme : "".to_string(),
+        line : *line,
+        num_ : None,
+        str_ : None
+    };
+}
+
+fn build_num_token(num : f64, line : &i8) -> Token {
+    return Token {
+        type_ : TokenType::Number,
+        lexeme : "".to_string(),
+        line : *line,
+        num_ : Some(num),
+        str_ : None
+    };
+}
+
+fn build_str_token(s : String, line : &i8) -> Token {
+    return Token {
+        type_ : TokenType::String_,
+        lexeme : "".to_string(),
+        line : *line,
+        num_ : None,
+        str_ : Some(s)
     };
 }
 
@@ -20,12 +42,15 @@ fn next_matches(c: char, char_iter: &mut Peekable<Chars>) -> bool {
     }
 }
 
-fn consume_comment(char_iter: &mut Peekable<Chars>) -> () {
+fn consume_comment(char_iter: &mut Peekable<Chars>, line: &mut i8) -> () {
     loop {
         match char_iter.next() {
             Some(c) => {
                 match c {
-                    '\n' => break,
+                    '\n' => {
+                        *line += 1;
+                        break;
+                    },
                     _ => ()
                 }
             },
@@ -34,15 +59,18 @@ fn consume_comment(char_iter: &mut Peekable<Chars>) -> () {
     }
 }
 
-fn get_string(char_iter: &mut Peekable<Chars>) -> String {
+fn get_string(char_iter: &mut Peekable<Chars>, line: &mut i8) -> String {
     let mut s : String = "".to_string();
     loop {
         match char_iter.next() {
             Some(c) => {
-                if c == '"' {
-                    return s;
-                } else {
-                    s.push(c);
+                match c {
+                    '\n' => {
+                        *line += 1;
+                        s.push(c);
+                    },
+                    '"' => return s,
+                    _ => s.push(c)
                 }
             },
             None => {
@@ -59,7 +87,7 @@ fn get_digits(c: char, char_iter: &mut Peekable<Chars>) -> f64 {
     while char_iter.peek().unwrap().is_digit(10) {
         digit_str.push(char_iter.next().unwrap());
     }
-    let mut has_decimal = *(char_iter.peek().unwrap()) == '.';
+    let has_decimal = *(char_iter.peek().unwrap()) == '.';
 
     if has_decimal {
         digit_str.push(char_iter.next().unwrap());
@@ -70,109 +98,128 @@ fn get_digits(c: char, char_iter: &mut Peekable<Chars>) -> f64 {
 
     match digit_str.parse::<f64>() {
         Ok(n) => return n,
-        Err(e) => {
-            println!("Failed to parse digit");
+        Err(_) => {
+            println!("Failed to parse number");
             return 0.0;
         }
     }
 }
 
 fn get_identifier(c: char, char_iter: &mut Peekable<Chars>) -> String {
-    return "".to_string();
+    let mut id : String = c.to_string();
+
+    while char_iter.peek().unwrap().is_alphanumeric() {
+        id.push(char_iter.next().unwrap());
+    }
+
+    return id;
 }
 
-fn scan_token(mut char_iter: &mut Peekable<Chars>, src: &String) -> Token {
-    println!("scan_token");
-    let prev = (*char_iter).clone();
+fn scan_token(mut char_iter: &mut Peekable<Chars>, mut line: &mut i8) -> Token {
     match char_iter.next() {
         Some(c) => match c {
-            '(' => return build_token(TokenType::LeftParen),
-            ')' => return build_token(TokenType::RightParen),
-            '{' => return build_token(TokenType::LeftBrace),
-            '}' => return build_token(TokenType::RightBrace),
-            ',' => return build_token(TokenType::Comma),
-            '.' => return build_token(TokenType::Dot),
-            '-' => return build_token(TokenType::Minus),
-            '+' => return build_token(TokenType::Plus),
-            ';' => return build_token(TokenType::SemiColon),
-            '*' => return build_token(TokenType::Star),
+            '(' => return build_token(TokenType::LeftParen, &line),
+            ')' => return build_token(TokenType::RightParen, &line),
+            '{' => return build_token(TokenType::LeftBrace, &line),
+            '}' => return build_token(TokenType::RightBrace, &line),
+            ',' => return build_token(TokenType::Comma, &line),
+            '.' => return build_token(TokenType::Dot, &line),
+            '-' => return build_token(TokenType::Minus, &line),
+            '+' => return build_token(TokenType::Plus, &line),
+            ';' => return build_token(TokenType::SemiColon, &line),
+            '*' => return build_token(TokenType::Star, &line),
             '!' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::BangEqual);
+                    return build_token(TokenType::BangEqual, &line);
                 } else {
-                    return build_token(TokenType::Bang);
+                    return build_token(TokenType::Bang, &line);
                 }
             }, 
             '=' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::EqualEqual);
+                    return build_token(TokenType::EqualEqual, &line);
                 } else {
-                    return build_token(TokenType::Equal);
+                    return build_token(TokenType::Equal, &line);
                 }
             },
             '<' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::LessEqual);
+                    return build_token(TokenType::LessEqual, &line);
                 } else {
-                    return build_token(TokenType::Less);
+                    return build_token(TokenType::Less, &line);
                 }
             },
             '>' => {
                 if next_matches('=', &mut char_iter) {
-                    return build_token(TokenType::GreaterEqual);
+                    return build_token(TokenType::GreaterEqual, &line);
                 } else {
-                    return build_token(TokenType::Greater);
+                    return build_token(TokenType::Greater, &line);
                 }
             },
             '/' => {
                 if next_matches('/', &mut char_iter) {
-                    consume_comment(&mut char_iter);
-                    return build_token(TokenType::Null);
+                    consume_comment(&mut char_iter, &mut line);
+                    return build_token(TokenType::Null, &line);
                 } else {
-                    return build_token(TokenType::Slash);
+                    return build_token(TokenType::Slash, &line);
                 }
-    
             },
-            ' ' => return build_token(TokenType::Null), 
-            '\r' => return build_token(TokenType::Null),
-            '\t' => return build_token(TokenType::Null),
+            ' ' => return build_token(TokenType::Null, &line), 
+            '\r' => return build_token(TokenType::Null, &line),
+            '\t' => return build_token(TokenType::Null, &line),
+            '\n' => {
+                *line += 1;   
+                return build_token(TokenType::Null, &line);
+            },
             '"' => {
-                let s : String = get_string(&mut char_iter);
-                println!("{}", s);
-                return build_token(TokenType::String_);
+                let s : String = get_string(&mut char_iter, &mut line);
+                return build_str_token(s, &line);
             },
             _ => {
                 if c.is_digit(10) {
                     let d : f64 = get_digits(c, &mut char_iter);
-                    println!("{}", d);
-                    return build_token(TokenType::Number);
+                    return build_num_token(d, &line);
                 } else if c.is_alphabetic() {
                     let s : String = get_identifier(c, &mut char_iter);
-                    println!("{}", s);
-                    return build_token(TokenType::Identifier);
+
+                    match s.as_ref() {
+                        "and" => return build_token(TokenType::And, &line),
+                        "class" => return build_token(TokenType::Class, &line),
+                        "else" => return build_token(TokenType::Else, &line),
+                        "false" => return build_token(TokenType::False, &line),
+                        "fun" => return build_token(TokenType::Fun, &line),
+                        "for" => return build_token(TokenType::For, &line),
+                        "if" => return build_token(TokenType::If, &line),
+                        "nil" => return build_token(TokenType::Nil, &line),
+                        "or" => return build_token(TokenType::Or, &line),
+                        "print" => return build_token(TokenType::Print, &line),
+                        "return" => return build_token(TokenType::Return, &line),
+                        "super" => return build_token(TokenType::Super, &line),
+                        "this" => return build_token(TokenType::This, &line),
+                        "true" => return build_token(TokenType::True, &line),
+                        "var" => return build_token(TokenType::Var, &line),
+                        "while" => return build_token(TokenType::While, &line),
+                        _ => return build_token(TokenType::Identifier, &line)
+                    }
                 } else {
-                    return build_token(TokenType::Null);
+                    return build_token(TokenType::Null, &line);
                 }
             }
         },
-        None => return Token {
-            type_: TokenType::Eof,
-            lexeme: "stuff".to_string(),
-            line: 4
-        }
+        None => return build_token(TokenType::Eof, &line)
     }
 }
 
 pub fn scan_tokens(source: String) -> Vec<Token> {
     let mut tokens : Vec<Token> = Vec::new();
-    let mut done : bool = false;
-    let mut cur : usize = 0;
 
     let src_len = source.len();
     let mut char_iter = source.chars().peekable();
 
+    let mut line : i8 = 1;
+
     loop {
-        let tkn = scan_token(&mut char_iter, &source);
+        let tkn = scan_token(&mut char_iter, &mut line);
         match tkn {
             Token { type_: TokenType::Eof, .. } => {
                 tokens.push(tkn);    
